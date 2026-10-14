@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>معبد لالش - تجربة ثلاثية الأبعاد تفاعلية</title>
+
+    <!-- Tailwind CSS for responsive RTL Arabic Interface -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Amiri (Sacred Traditional Serif) & Cairo (Clean UI Sans) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Three.js Core & Official Addons (r128) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <style>
+        :root {
+            --gold-primary: #d4af37;
+            --gold-glow: rgba(212, 175, 55, 0.45);
+            --stone-dark: rgba(18, 21, 28, 0.82);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0f19;
+            font-family: 'Cairo', sans-serif;
+            color: #f8fafc;
+        }
+
+        .font-sacred {
+            font-family: 'Amiri', serif;
+        }
+
+        /* 3D Canvas Container */
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        /* Glassmorphism UI Panels */
+        .glass-panel {
+            background: rgba(15, 20, 30, 0.72);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(212, 175, 55, 0.28);
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-btn {
+            background: rgba(24, 30, 44, 0.78);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(212, 175, 55, 0.32);
+            color: #f3f4f6;
+            transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .glass-btn:hover {
+            background: rgba(212, 175, 55, 0.22);
+            border-color: rgba(212, 175, 55, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.25);
+        }
+
+        .glass-btn:active {
+            transform: translateY(0px) scale(0.98);
+        }
+
+        .glass-btn.active-btn {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.38), rgba(180, 130, 30, 0.25));
+            border-color: #f5d061;
+            color: #fef08a;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.35);
+        }
+
+        /* 3D Scene Floating Arabic Labels */
+        #labels-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .scene-label {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: opacity 0.35s ease, transform 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .scene-label:hover {
+            transform: translate(-50%, -106%) scale(1.06);
+            z-index: 30;
+        }
+
+        .scene-label-badge {
+            background: rgba(14, 19, 29, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(212, 175, 55, 0.65);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            color: #fef9c3;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 12px rgba(212, 175, 55, 0.2);
+        }
+
+        .scene-label:hover .scene-label-badge {
+            background: rgba(212, 175, 55, 0.92);
+            color: #0f172a;
+            border-color: #ffffff;
+        }
+
+        .scene-label-stem {
+            width: 2px;
+            height: 22px;
+            background: linear-gradient(to bottom, #d4af37, rgba(212, 175, 55, 0.15));
+        }
+
+        .scene-label-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #facc15;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px #facc15;
+            animation: pulseGlow 2.2s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.95; }
+            50% { transform: scale(1.35); opacity: 0.6; }
+        }
+
+        /* Custom Scrollbar for Info Drawer */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(212, 175, 55, 0.45);
+            border-radius: 9999px;
+        }
+
+        /* Smooth Fade Transitions */
+        .fade-transition {
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D WebGL Viewport -->
+    <div id="canvas-container" aria-label="مشهد ثلاثي الأبعاد لمعبد لالش"></div>
+
+    <!-- 3D Projected Arabic Labels Layer -->
+    <div id="labels-container"></div>
+
+    <!-- Top Header & Primary Controls Bar -->
+    <header class="fixed top-0 inset-x-0 z-20 p-3 sm:p-5 pointer-events-none flex flex-col lg:flex-row items-center justify-between gap-3">
+        
+        <!-- Right Side (RTL Start): Sacred Title & Sun Emblem -->
+        <div class="glass-panel pointer-events-auto rounded-2xl px-4 py-2.5 sm:px-6 sm:py-3 flex items-center gap-3.5 w-full lg:w-auto justify-between lg:justify-start">
+            <div class="flex items-center gap-3.5">
+                <!-- Sacred 24-Ray Yazidi Sun Finial SVG Emblem -->
+                <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-center shrink-0 shadow-inner">
+                    <svg class="w-7 h-7 text-amber-400 animate-[spin_45s_linear_infinite]" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="11" fill="currentColor" />
+                        <circle cx="32" cy="32" r="15" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" />
+                        <!-- Sun Rays -->
+                        <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <line x1="32" y1="3" x2="32" y2="13" />
+                            <line x1="32" y1="51" x2="32" y2="61" />
+                            <line x1="3" y1="32" x2="13" y2="32" />
+                            <line x1="51" y1="32" x2="61" y2="32" />
+                            <line x1="11.5" y1="11.5" x2="18.5" y2="18.5" />
+                            <line x1="45.5" y1="45.5" x2="52.5" y2="52.5" />
+                            <line x1="52.5" y1="11.5" x2="45.5" y2="18.5" />
+                            <line x1="18.5" y1="45.5" x2="11.5" y2="52.5" />
+                            <line x1="21" y1="5.5" x2="24.5" y2="14" />
+                            <line x1="43" y1="5.5" x2="39.5" y2="14" />
+                            <line x1="21" y1="58.5" x2="24.5" y2="50" />
+                            <line x1="43" y1="58.5" x2="39.5" y2="50" />
+                            <line x1="5.5" y1="21" x2="14" y2="24.5" />
+                            <line x1="5.5" y1="43" x2="14" y2="39.5" />
+                            <line x1="58.5" y1="21" x2="50" y2="24.5" />
+                            <line x1="58.5" y1="43" x2="50" y2="39.5" />
+                        </g>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-sacred text-2xl sm:text-3xl font-bold text-amber-200 tracking-wide leading-none">معبد لالش</h1>
+                        <span id="mode-badge" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                            الوضع النهاري
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-300 mt-1 hidden sm:block">وادي لالش المقدس — محاكاة معمارية ثلاثية الأبعاد</p>
+                </div>
+            </div>
+
+            <!-- Mobile Info Button Shortcut -->
+            <button id="btn-info-mobile" class="lg:hidden glass-btn px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>معلومات</span>
+            </button>
+        </div>
+
+        <!-- Left Side (RTL End): Main Interactive Control Buttons -->
+        <nav class="pointer-events-auto flex flex-wrap items-center justify-center gap-2 w-full lg:w-auto" aria-label="أدوات التحكم بالمشهد">
+            
+            <!-- Day Mode Button -->
+            <button id="btn-day-mode" class="glass-btn active-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <svg class="w-4 h-4 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+                <span>الوضع النهاري</span>
+            </button>
+
+            <!-- Night Mode Button -->
+            <button id="btn-night-mode" class="glass-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <svg class="w-4 h-4 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+                <span>الوضع الليلي</span>
+            </button>
+
+            <!-- Guided Auto Tour Button -->
+            <button id="btn-auto-tour" class="glass-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                <span>جولة تلقائية</span>
+            </button>
+
+            <!-- Toggle 3D Labels Button -->
+            <button id="btn-toggle-labels" class="glass-btn active-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                <span>إظهار/إخفاء التسميات</span>
+            </button>
+
+            <!-- Reset Camera Button -->
+            <button id="btn-reset-camera" class="glass-btn px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>إعادة ضبط الكاميرا</span>
+            </button>
+
+            <!-- Information Panel Button (Desktop) -->
+            <button id="btn-info" class="hidden lg:flex glass-btn px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold items-center gap-2">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>معلومات</span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Active Tour / Point of Interest Subtitle Banner -->
+    <div id="poi-banner" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-0 translate-y-4 fade-transition w-[92%] max-w-xl">
+        <div class="glass-panel rounded-2xl px-6 py-4 text-center border-amber-400/50">
+            <div class="flex items-center justify-center gap-2 mb-1">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                <h3 id="poi-title" class="font-sacred text-xl sm:text-2xl font-bold text-amber-300">المعبد الرئيسي</h3>
+            </div>
+            <p id="poi-desc" class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                القلب الروحي لوادي لالش، يضم القاعات الحجرية المقدسة والأروقة المقوسة التاريخية.
+            </p>
+        </div>
+    </div>
+
+    <!-- Bottom Quick-Navigation Landmarks Bar -->
+    <footer class="fixed bottom-3 inset-x-0 z-20 px-3 pointer-events-none flex justify-center">
+        <div class="glass-panel pointer-events-auto rounded-2xl px-3 py-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto max-w-full">
+            <span class="text-xs text-amber-300/90 font-semibold px-2 hidden sm:inline shrink-0">انتقال سريع:</span>
+            <button data-target="main_temple" class="landmark-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-medium shrink-0">المعبد الرئيسي</button>
+            <button data-target="conical_spire" class="landmark-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-medium shrink-0">البرج المخروطي</button>
+            <button data-target="courtyard" class="landmark-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-medium shrink-0">الساحة</button>
+            <button data-target="entrance" class="landmark-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-medium shrink-0">المدخل</button>
+            <button data-target="pathway" class="landmark-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-medium shrink-0">الممر الحجري</button>
+        </div>
+    </footer>
+
+    <!-- Side Information Panel (معلومات) -->
+    <aside id="info-drawer" class="fixed top-20 sm:top-24 right-3 sm:right-5 bottom-20 w-[92vw] max-w-md z-30 glass-panel rounded-3xl p-6 flex flex-col justify-between overflow-y-auto fade-transition opacity-0 pointer-events-none translate-x-8">
+        <div>
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between border-b border-amber-500/25 pb-4 mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 font-sacred text-xl font-bold">
+                        ✦
+                    </div>
+                    <div>
+                        <h2 class="font-sacred text-2xl font-bold text-amber-200">عن معبد لالش المقدس</h2>
+                        <p class="text-xs text-slate-400">طراز معماري روحي وتاريخي فريد</p>
+                    </div>
+                </div>
+                <button id="btn-close-info" class="glass-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-white" aria-label="إغلاق">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Primary Required Arabic Description -->
+            <div class="bg-amber-500/10 border border-amber-400/30 rounded-2xl p-4 mb-5 shadow-inner">
+                <p class="font-sacred text-lg sm:text-xl leading-relaxed text-amber-100 text-justify">
+                    "معبد لالش هو أقدس موقع ديني عند الإيزيديين، ويتميز بطرازه الروحي الفريد وأبراجه المخروطية الشهيرة."
+                </p>
+            </div>
+
+            <!-- Architectural Highlights -->
+            <div class="space-y-4 text-sm text-slate-200 leading-relaxed">
+                <div class="bg-slate-900/55 rounded-2xl p-3.5 border border-slate-700/60">
+                    <h3 class="font-bold text-amber-300 mb-1 flex items-center gap-2">
+                        <span>❖</span> الأبراج المخروطية المضلعة
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300">
+                        تتألق قباب لالش البيضاء المخروطية بأضلاعها العمودية المتموجة التي ترمز إلى أشعة الشمس، وتعلوها كرات ذهبية لامعة تعكس النور في قلب الوادي.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900/55 rounded-2xl p-3.5 border border-slate-700/60">
+                    <h3 class="font-bold text-amber-300 mb-1 flex items-center gap-2">
+                        <span>❖</span> العمارة الحجرية والوادي المقدس
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300">
+                        يحتضن المعبد وادٍ جبلي هادئ تحيط به التلال والأشجار المباركة ومجاري المياه النقية، وتقود إليه ممرات وقناطر حجرية منحوتة بعناية مع قناديل زيت تضيء الساحات ليلاً.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900/55 rounded-2xl p-3.5 border border-slate-700/60">
+                    <h3 class="font-bold text-amber-300 mb-1.5 flex items-center gap-2">
+                        <span>❖</span> إرشادات التفاعل والتحكم
+                    </h3>
+                    <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                        <li><strong>التدوير:</strong> اسحب بزر الفأرة الأيسر أو بإصبعك.</li>
+                        <li><strong>التقريب والإبعاد:</strong> استخدم عجلة الفأرة أو قرص الشاشة بإصبعين.</li>
+                        <li><strong>التحريك الأفقي:</strong> اسحب بزر الفأرة الأيمن أو بإصبعين.</li>
+                        <li><strong>التسميات التفاعلية:</strong> اضغط على أي تسمية في المشهد للانتقال السلس إليها.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- GLB Export Support Footer -->
+        <div class="mt-6 pt-4 border-t border-amber-500/20 flex flex-col gap-2">
+            <button id="btn-export-glb" class="glass-btn w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 text-amber-200">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>تصدير النموذج ثلاثي الأبعاد (GLB)</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Non-intrusive Status Notification Toast -->
+    <div id="toast-msg" class="fixed top-24 left-1/2 -translate-x-1/2 z-40 glass-panel px-5 py-2.5 rounded-full text-xs font-semibold text-amber-200 opacity-0 pointer-events-none fade-transition">
+        جاري تجهيز الملف...
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * YAZIDI LALISH TEMPLE (معبد لالش) - INTERACTIVE 3D WEBGL EXPERIENCE
+         * Built with Three.js (Procedural Sacred Architecture, PBR Textures, Day/Night)
+         * ============================================================================
+         */
+
+        // --- Global Application State ---
+        const AppState = {
+            isNight: false,
+            dayNightMix: 0, // 0 = Day, 1 = Night (smoothly interpolated)
+            targetDayNightMix: 0,
+            labelsVisible: true,
+            autoTourActive: false,
+            tourIndex: 0,
+            tourTimer: 0,
+            infoOpen: false,
+            cameraTransition: {
+                active: false,
+                startTime: 0,
+                duration: 2200,
+                startPos: new THREE.Vector3(),
+                startTarget: new THREE.Vector3(),
+                endPos: new THREE.Vector3(),
+                endTarget: new THREE.Vector3()
+            }
+        };
+
+        // --- Key Architectural Landmarks (Used for 3D Arabic Labels & Camera Tour) ---
+        const Landmarks = [
+            {
+                id: 'main_temple',
+                title: 'المعبد الرئيسي',
+                description: 'المبنى الحجري المقدس في قلب وادي لالش، يضم الأروقة المقوسة والمزارات التاريخية المبنية بالحجر الجيري المنحوت.',
+                worldPos: new THREE.Vector3(0, 11.5, -6),
+                camPos: new THREE.Vector3(14, 15, 16),
+                camTarget: new THREE.Vector3(0, 7.5, -5)
+            },
+            {
+                id: 'conical_spire',
+                title: 'البرج المخروطي',
+                description: 'القبة المخروطية المضلعة الشهيرة في معبد لالش، تتألف من أضلاع عمودية ترمز لأشعة الشمس وتعلوها القمة الذهبية.',
+                worldPos: new THREE.Vector3(-3.5, 22.8, -6.5),
+                camPos: new THREE.Vector3(-15, 20, 8),
+                camTarget: new THREE.Vector3(-2.5, 15, -6)
+            },
+            {
+                id: 'courtyard',
+                title: 'الساحة',
+                description: 'الساحة المقدسة الداخلية المحاطة بالأقواس الحجرية وأشجار الزيتون والتوت المباركة وقناديل الزيت المضيئة.',
+                worldPos: new THREE.Vector3(1.5, 5.2, 4.5),
+                camPos: new THREE.Vector3(12, 9.5, 14),
+                camTarget: new THREE.Vector3(0, 4.5, 3)
+            },
+            {
+                id: 'entrance',
+                title: 'المدخل',
+                description: 'البوابة الحجرية الشرقية المزخرفة بنقوش الشمس المقدسة والعتبة العالية التي يدخل عبرها الزوار بخشوع واحترام.',
+                worldPos: new THREE.Vector3(0, 7.8, 13.8),
+                camPos: new THREE.Vector3(9, 8.5, 25),
+                camTarget: new THREE.Vector3(0, 5.2, 13)
+            },
+            {
+                id: 'pathway',
+                title: 'الممر الحجري',
+                description: 'الممر الحجري المدرج وجسر الصراط فوق جدول المياه الصافي الذي يقود الزائرين عبر وادي لالش نحو بوابة المعبد.',
+                worldPos: new THREE.Vector3(0, 2.6, 26.5),
+                camPos: new THREE.Vector3(-14, 9, 38),
+                camTarget: new THREE.Vector3(0, 2.5, 23)
+            }
+        ];
+
+        // Default panoramic camera coordinates
+        const DEFAULT_CAM_POS = new THREE.Vector3(28, 21, 38);
+        const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 7, 2);
+
+        // --- Three.js Scene Globals ---
+        let scene, camera, renderer, controls, clock;
+        let templeExportGroup; // Group holding architecture for clean GLB export
+        let sunLight, hemiLight, ambientLight;
+        let skyMat, starsPoints, moonMesh, sunDiscMesh, firefliesPoints;
+        const lanternLights = [];
+        const lanternFlames = [];
+        const spireUplights = [];
+        const labelElements = [];
+
+        /**
+         * ============================================================================
+         * 1. PROCEDURAL PBR TEXTURE GENERATOR (No External Dependencies)
+         * ============================================================================
+         */
+        function createProceduralTextures() {
+            // 1A. Carved Ashlar Limestone Texture & Bump Map
+            const stoneCanvas = document.createElement('canvas');
+            stoneCanvas.width = 512;
+            stoneCanvas.height = 512;
+            const sCtx = stoneCanvas.getContext('2d');
+
+            const stoneBumpCanvas = document.createElement('canvas');
+            stoneBumpCanvas.width = 512;
+            stoneBumpCanvas.height = 512;
+            const sbCtx = stoneBumpCanvas.getContext('2d');
+
+            // Base warm limestone color
+            sCtx.fillStyle = '#d8cbb8';
+            sCtx.fillRect(0, 0, 512, 512);
+            sbCtx.fillStyle = '#808080';
+            sbCtx.fillRect(0, 0, 512, 512);
+
+            const rows = 16;
+            const rowHeight = 512 / rows;
+            for (let r = 0; r < rows; r++) {
+                const y = r * rowHeight;
+                const cols = (r % 2 === 0) ? 8 : 10;
+                const colWidth = 512 / cols;
+                const offset = (r % 2 === 0) ? 0 : colWidth * 0.5;
+
+                for (let c = -1; c <= cols; c++) {
+                    const x = c * colWidth + offset;
+                    // Subtle variation per limestone block
+                    const shade = 205 + Math.floor(Math.random() * 28 - 14);
+                    const warmR = shade + 12;
+                    const warmG = shade + 2;
+                    const warmB = shade - 16;
+                    sCtx.fillStyle = `rgb(${warmR}, ${warmG}, ${warmB})`;
+                    sCtx.fillRect(x + 2, y + 2, colWidth - 4, rowHeight - 4);
+
+                    const bVal = 135 + Math.floor(Math.random() * 36 - 18);
+                    sbCtx.fillStyle = `rgb(${bVal}, ${bVal}, ${bVal})`;
+                    sbCtx.fillRect(x + 2, y + 2, colWidth - 4, rowHeight - 4);
+
+                    // Mortar joints
+                    sCtx.strokeStyle = '#9c8d79';
+                    sCtx.lineWidth = 2.5;
+                    sCtx.strokeRect(x, y, colWidth, rowHeight);
+
+                    sbCtx.strokeStyle = '#2a2a2a';
+                    sbCtx.lineWidth = 3;
+                    sbCtx.strokeRect(x, y, colWidth, rowHeight);
+                }
+            }
+
+            // Fine weathered stone grain
+            for (let i = 0; i < 9000; i++) {
+                const gx = Math.random() * 512;
+                const gy = Math.random() * 512;
+                const alpha = Math.random() * 0.08;
+                sCtx.fillStyle = Math.random() > 0.5 ? `rgba(255,250,240,${alpha})` : `rgba(60,45,30,${alpha})`;
+                sCtx.fillRect(gx, gy, 2, 2);
+                sbCtx.fillStyle = Math.random() > 0.5 ? `rgba(220,220,220,${alpha * 2})` : `rgba(40,40,40,${alpha * 2})`;
+                sbCtx.fillRect(gx, gy, 2, 2);
+            }
+
+            const stoneTex = new THREE.CanvasTexture(stoneCanvas);
+            stoneTex.wrapS = stoneTex.wrapT = THREE.RepeatWrapping;
+            stoneTex.repeat.set(3, 2);
+
+            const stoneBump = new THREE.CanvasTexture(stoneBumpCanvas);
+            stoneBump.wrapS = stoneBump.wrapT = THREE.RepeatWrapping;
+            stoneBump.repeat.set(3, 2);
+
+            // 1B. Sacred Whitewashed Fluted Cone Texture
+            const spireCanvas = document.createElement('canvas');
+            spireCanvas.width = 256;
+            spireCanvas.height = 256;
+            const spCtx = spireCanvas.getContext('2d');
+            spCtx.fillStyle = '#f8f5ec';
+            spCtx.fillRect(0, 0, 256, 256);
+            for (let i = 0; i < 3000; i++) {
+                spCtx.fillStyle = `rgba(180, 168, 145, ${Math.random() * 0.08})`;
+                spCtx.fillRect(Math.random() * 256, Math.random() * 256, 2, 4);
+            }
+            const spireTex = new THREE.CanvasTexture(spireCanvas);
+            spireTex.wrapS = spireTex.wrapT = THREE.RepeatWrapping;
+
+            // 1C. Flagstone Courtyard & Pathway Texture
+            const paveCanvas = document.createElement('canvas');
+            paveCanvas.width = 512;
+            paveCanvas.height = 512;
+            const pCtx = paveCanvas.getContext('2d');
+            pCtx.fillStyle = '#b9ab96';
+            pCtx.fillRect(0, 0, 512, 512);
+            for (let y = 0; y < 512; y += 32) {
+                for (let x = 0; x < 512; x += 48) {
+                    const jitterX = (y % 64 === 0) ? 0 : 24;
+                    const tone = 172 + Math.floor(Math.random() * 30 - 15);
+                    pCtx.fillStyle = `rgb(${tone + 10}, ${tone + 3}, ${tone - 10})`;
+                    pCtx.fillRect(x + jitterX + 2, y + 2, 44, 28);
+                    pCtx.strokeStyle = '#7d705f';
+                    pCtx.lineWidth = 2;
+                    pCtx.strokeRect(x + jitterX, y, 48, 32);
+                }
+            }
+            const paveTex = new THREE.CanvasTexture(paveCanvas);
+            paveTex.wrapS = paveTex.wrapT = THREE.RepeatWrapping;
+            paveTex.repeat.set(6, 6);
+
+            return { stoneTex, stoneBump, spireTex, paveTex };
+        }
+
+        /**
+         * ============================================================================
+         * 2. ICONIC LALISH FLUTED CONICAL SPIRE GENERATOR (البرج المخروطي المضلع)
+         * ============================================================================
+         */
+        function createFlutedConicalSpire(baseRadius, height, fluteCount, materials) {
+            const spireGroup = new THREE.Group();
+
+            // 1. Octagonal/Cylindrical Stone Drum Base (الرقبة الحجرية للبرج)
+            const drumHeight = height * 0.26;
+            const drumGeo = new THREE.CylinderGeometry(baseRadius * 0.96, baseRadius * 1.02, drumHeight, 16);
+            const drumMesh = new THREE.Mesh(drumGeo, materials.carvedStone);
+            drumMesh.position.y = drumHeight * 0.5;
+            drumMesh.castShadow = true;
+            drumMesh.receiveShadow = true;
+            spireGroup.add(drumMesh);
+
+            // Molded Stone Cornice Ring at top of Drum
+            const corniceGeo = new THREE.CylinderGeometry(baseRadius * 1.07, baseRadius * 1.03, 0.38, 24);
+            const corniceMesh = new THREE.Mesh(corniceGeo, materials.carvedStone);
+            corniceMesh.position.y = drumHeight;
+            corniceMesh.castShadow = true;
+            spireGroup.add(corniceMesh);
+
+            // 2. Parametric Fluted / Ribbed Cone Geometry (القبة المخروطية المضلعة)
+            const coneHeight = height * 0.74;
+            const radialSegments = fluteCount * 6; // High resolution for crisp pleats
+            const heightSegments = 28;
+            const coneGeo = new THREE.CylinderGeometry(0.06, baseRadius, coneHeight, radialSegments, heightSegments, false);
+
+            const posAttr = coneGeo.attributes.position;
+            const vertex = new THREE.Vector3();
+
+            for (let i = 0; i < posAttr.count; i++) {
+                vertex.fromBufferAttribute(posAttr, i);
+                // Normalized height from 0 (bottom of cone) to 1 (tip of cone)
+                const normY = (vertex.y + coneHeight * 0.5) / coneHeight;
+                const horizDist = Math.hypot(vertex.x, vertex.z);
+
+                if (horizDist > 0.001) {
+                    const angle = Math.atan2(vertex.z, vertex.x);
+                    // Sharp pleated ridges characteristic of Lalish cones
+                    const ribWave = Math.abs(Math.cos(angle * (fluteCount / 2)));
+                    // Depth of flutes tapers smoothly near the apex
+                    const fluteAmplitude = 0.13 * (1.0 - normY * 0.72);
+                    const scaleFactor = 1.0 - fluteAmplitude * (1.0 - ribWave);
+
+                    vertex.x *= scaleFactor;
+                    vertex.z *= scaleFactor;
+                    posAttr.setXYZ(i, vertex.x, vertex.y, vertex.z);
+                }
+            }
+            coneGeo.computeVertexNormals();
+
+            const coneMesh = new THREE.Mesh(coneGeo, materials.flutedSpire);
+            coneMesh.position.y = drumHeight + coneHeight * 0.5;
+            coneMesh.castShadow = true;
+            coneMesh.receiveShadow = true;
+            spireGroup.add(coneMesh);
+
+            // 3. Sacred Golden Finial at the Peak (الهلال والكرات الذهبية)
+            const finialGroup = new THREE.Group();
+            finialGroup.position.y = drumHeight + coneHeight + 0.1;
+
+            const rodMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.05, 0.07, 1.35, 12),
+                materials.gold
+            );
+            rodMesh.position.y = 0.65;
+            finialGroup.add(rodMesh);
+
+            const lowerOrb = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), materials.gold);
+            lowerOrb.position.y = 0.42;
+            finialGroup.add(lowerOrb);
+
+            const upperOrb = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 16), materials.gold);
+            upperOrb.position.y = 0.92;
+            finialGroup.add(upperOrb);
+
+            const sunRing = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.04, 12, 24), materials.gold);
+            sunRing.position.y = 1.42;
+            finialGroup.add(sunRing);
+
+            spireGroup.add(finialGroup);
+
+            return spireGroup;
+        }
+
+        /**
+         * ============================================================================
+         * 3. SACRED STONE LANTERN GENERATOR (قناديل ومصابيح المعبد)
+         * ============================================================================
+         */
+        function addSacredLantern(parent, x, y, z, materials, withPointLight = true) {
+            const lanternGroup = new THREE.Group();
+            lanternGroup.position.set(x, y, z);
+
+            // Stone Pedestal / Pillar
+            const pillar = new THREE.Mesh(
+                new THREE.BoxGeometry(0.45, 0.9, 0.45),
+                materials.carvedStone
+            );
+            pillar.position.y = 0.45;
+            pillar.castShadow = true;
+            pillar.receiveShadow = true;
+            lanternGroup.add(pillar);
+
+            // Stone Cap
+            const cap = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.12, 0.36, 0.32, 4),
+                materials.carvedStone
+            );
+            cap.rotation.y = Math.PI / 4;
+            cap.position.y = 1.32;
+            lanternGroup.add(cap);
+
+            // Glowing Oil Flame Core
+            const flameMat = new THREE.MeshBasicMaterial({
+                color: 0xffb74d
+            });
+            const flame = new THREE.Mesh(
+                new THREE.SphereGeometry(0.14, 12, 12),
+                flameMat
+            );
+            flame.position.y = 1.05;
+            lanternGroup.add(flame);
+            lanternFlames.push(flame);
+
+            if (withPointLight) {
+                const pLight = new THREE.PointLight(0xff9e3d, 0, 13, 1.8);
+                pLight.position.set(x, y + 1.25, z);
+                scene.add(pLight);
+                lanternLights.push({
+                    light: pLight,
+                    baseIntensity: 1.55,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            parent.add(lanternGroup);
+        }
+
+        /**
+         * ============================================================================
+         * 4. BUILD THE COMPLETE LALISH TEMPLE & HOLY VALLEY SCENE
+         * ============================================================================
+         */
+        function buildLalishScene() {
+            const textures = createProceduralTextures();
+
+            // PBR Material Palette
+            const materials = {
+                carvedStone: new THREE.MeshStandardMaterial({
+                    map: textures.stoneTex,
+                    bumpMap: textures.stoneBump,
+                    bumpScale: 0.08,
+                    roughness: 0.84,
+                    metalness: 0.05
+                }),
+                darkStoneTrim: new THREE.MeshStandardMaterial({
+                    color: 0x9b8c78,
+                    bumpMap: textures.stoneBump,
+                    bumpScale: 0.06,
+                    roughness: 0.88,
+                    metalness: 0.06
+                }),
+                flutedSpire: new THREE.MeshStandardMaterial({
+                    map: textures.spireTex,
+                    color: 0xfbf8f1,
+                    roughness: 0.55,
+                    metalness: 0.04,
+                    emissive: new THREE.Color(0x221a0f),
+                    emissiveIntensity: 0.05
+                }),
+                courtyardPaving: new THREE.MeshStandardMaterial({
+                    map: textures.paveTex,
+                    bumpMap: textures.stoneBump,
+                    bumpScale: 0.05,
+                    roughness: 0.85,
+                    metalness: 0.04
+                }),
+                gold: new THREE.MeshStandardMaterial({
+                    color: 0xf5c542,
+                    roughness: 0.22,
+                    metalness: 0.88,
+                    emissive: new THREE.Color(0x4a3500),
+                    emissiveIntensity: 0.2
+                }),
+                darkArchInterior: new THREE.MeshStandardMaterial({
+                    color: 0x1a1612,
+                    roughness: 0.95
+                }),
+                oliveTrunk: new THREE.MeshStandardMaterial({
+                    color: 0x5c4738,
+                    roughness: 0.92
+                }),
+                oliveFoliage: new THREE.MeshStandardMaterial({
+                    color: 0x4d6b47,
+                    roughness: 0.82
+                }),
+                cypressFoliage: new THREE.MeshStandardMaterial({
+                    color: 0x2d4c36,
+                    roughness: 0.85
+                }),
+                water: new THREE.MeshStandardMaterial({
+                    color: 0x2b6e82,
+                    roughness: 0.18,
+                    metalness: 0.35,
+                    transparent: true,
+                    opacity: 0.84
+                })
+            };
+
+            templeExportGroup = new THREE.Group();
+            templeExportGroup.name = "Lalish_Temple_Complex";
+            scene.add(templeExportGroup);
+
+            // ------------------------------------------------------------------------
+            // A. VALLEY TERRAIN & MOUNTAINOUS SURROUNDINGS (وادي لالش المقدس)
+            // ------------------------------------------------------------------------
+            const terrainGeo = new THREE.PlaneGeometry(220, 220, 110, 110);
+            terrainGeo.rotateX(-Math.PI / 2);
+            const tPos = terrainGeo.attributes.position;
+            const tColors = [];
+
+            for (let i = 0; i < tPos.count; i++) {
+                const vx = tPos.getX(i);
+                const vz = tPos.getZ(i);
+
+                // Distance from temple center
+                const distFromCenter = Math.hypot(vx, vz - 2);
+                let y = 0;
+
+                // Create natural valley basin: high mountains on North (-Z), East (+X), West (-X)
+                const valleyFactor = Math.max(0, (distFromCenter - 26) / 75);
+                const northMountain = vz < 10 ? Math.pow(Math.max(0, (10 - vz) / 55), 1.7) * 28 : 0;
+                const sideRidges = Math.pow(Math.abs(vx) / 60, 1.8) * 22;
+                const organicWaves =
+                    Math.sin(vx * 0.06) * Math.cos(vz * 0.06) * 3.2 +
+                    Math.sin(vx * 0.14 + vz * 0.11) * 1.1;
+
+                y = (northMountain + sideRidges + organicWaves) * Math.min(1, valleyFactor * 1.5);
+
+                // Flat terraced sanctuary foundation pad
+                if (Math.abs(vx) < 22 && vz > -22 && vz < 16) {
+                    const blend = Math.max(0, 1 - Math.hypot(vx / 22, (vz + 3) / 20));
+                    y = y * (1 - blend) + 3.2 * blend;
+                }
+
+                // Gentle stream bed running across the lower valley (around Z = 23)
+                const streamDist = Math.abs(vz - (23 + Math.sin(vx * 0.08) * 2.5));
+                if (streamDist < 3.5 && Math.abs(vx) < 60) {
+                    y -= (3.5 - streamDist) * 0.45;
+                }
+
+                tPos.setY(i, y);
+
+                // Vertex color blending between limestone cliffs and valley foliage
+                const c = new THREE.Color();
+                if (y > 14) {
+                    c.setHex(0x9a8c76); // Limestone mountain ridge
+                } else if (y > 5) {
+                    c.setHex(0x6e7552); // Olive hillside
+                } else if (streamDist < 3.2) {
+                    c.setHex(0x575248); // Wet stone stream bank
+                } else {
+                    c.setHex(0x596846); // Valley floor
+                }
+                tColors.push(c.r, c.g, c.b);
+            }
+
+            terrainGeo.setAttribute('color', new THREE.Float32BufferAttribute(tColors, 3));
+            terrainGeo.computeVertexNormals();
+
+            const terrainMat = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.92,
+                metalness: 0.02
+            });
+            const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+            terrainMesh.receiveShadow = true;
+            scene.add(terrainMesh);
+
+            // Sacred Valley Stream (نبع الوادي)
+            const streamGeo = new THREE.PlaneGeometry(110, 4.8, 48, 4);
+            streamGeo.rotateX(-Math.PI / 2);
+            const sPos = streamGeo.attributes.position;
+            for (let i = 0; i < sPos.count; i++) {
+                const sx = sPos.getX(i);
+                const sz = sPos.getZ(i);
+                sPos.setZ(i, sz + Math.sin(sx * 0.08) * 2.5);
+            }
+            streamGeo.computeVertexNormals();
+            const streamMesh = new THREE.Mesh(streamGeo, materials.water);
+            streamMesh.position.set(0, 0.15, 23);
+            scene.add(streamMesh);
+
+            // ------------------------------------------------------------------------
+            // B. RAISED SANCTUARY TERRACE & COURTYARD (الساحة والمنصة الحجرية)
+            // ------------------------------------------------------------------------
+            const platformMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(34, 4.2, 30),
+                materials.carvedStone
+            );
+            platformMesh.position.set(0, 2.0, -1);
+            platformMesh.castShadow = true;
+            platformMesh.receiveShadow = true;
+            templeExportGroup.add(platformMesh);
+
+            // Flagstone Courtyard Floor (أرضية الساحة)
+            const courtyardFloor = new THREE.Mesh(
+                new THREE.BoxGeometry(32.5, 0.3, 28.5),
+                materials.courtyardPaving
+            );
+            courtyardFloor.position.set(0, 4.15, -1);
+            courtyardFloor.receiveShadow = true;
+            templeExportGroup.add(courtyardFloor);
+
+            // ------------------------------------------------------------------------
+            // C. MAIN TEMPLE SANCTUARY BUILDING (المعبد الرئيسي)
+            // ------------------------------------------------------------------------
+            const sanctuaryGroup = new THREE.Group();
+            sanctuaryGroup.position.set(0, 4.2, -7.5);
+            templeExportGroup.add(sanctuaryGroup);
+
+            // Lower Main Sanctuary Hall
+            const mainHall = new THREE.Mesh(
+                new THREE.BoxGeometry(26, 6.2, 12),
+                materials.carvedStone
+            );
+            mainHall.position.set(0, 3.1, 0);
+            mainHall.castShadow = true;
+            mainHall.receiveShadow = true;
+            sanctuaryGroup.add(mainHall);
+
+            // Upper Terraced Sanctuary Tier (typical stepped stone massing of Lalish)
+            const upperHall = new THREE.Mesh(
+                new THREE.BoxGeometry(19, 3.6, 8.5),
+                materials.carvedStone
+            );
+            upperHall.position.set(-1.5, 7.8, -1.2);
+            upperHall.castShadow = true;
+            upperHall.receiveShadow = true;
+            sanctuaryGroup.add(upperHall);
+
+            // Eastern Wing Sanctuary Annex
+            const eastWing = new THREE.Mesh(
+                new THREE.BoxGeometry(6.5, 5.4, 11),
+                materials.carvedStone
+            );
+            eastWing.position.set(11.5, 2.7, 7.5);
+            eastWing.castShadow = true;
+            eastWing.receiveShadow = true;
+            sanctuaryGroup.add(eastWing);
+
+            // Western Wing Cloister
+            const westWing = new THREE.Mesh(
+                new THREE.BoxGeometry(6.0, 5.0, 12),
+                materials.carvedStone
+            );
+            westWing.position.set(-11.8, 2.5, 7.2);
+            westWing.castShadow = true;
+            westWing.receiveShadow = true;
+            sanctuaryGroup.add(westWing);
+
+            // Arched Colonnade (الأروقة المقوسة في الساحة) along Main Hall Facade
+            const archCount = 5;
+            const archSpacing = 4.2;
+            for (let i = 0; i < archCount; i++) {
+                const ax = (i - (archCount - 1) / 2) * archSpacing;
+                const archGroup = new THREE.Group();
+                archGroup.position.set(ax, 0, 6.2);
+
+                // Stone Pillars
+                const leftPillar = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.85, 4.4, 0.95),
+                    materials.darkStoneTrim
+                );
+                leftPillar.position.set(-1.45, 2.2, 0);
+                leftPillar.castShadow = true;
+                archGroup.add(leftPillar);
+
+                const rightPillar = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.85, 4.4, 0.95),
+                    materials.darkStoneTrim
+                );
+                rightPillar.position.set(1.45, 2.2, 0);
+                rightPillar.castShadow = true;
+                archGroup.add(rightPillar);
+
+                // Stone Arch Lintel
+                const lintel = new THREE.Mesh(
+                    new THREE.BoxGeometry(4.2, 1.1, 1.05),
+                    materials.carvedStone
+                );
+                lintel.position.set(0, 4.65, 0);
+                lintel.castShadow = true;
+                archGroup.add(lintel);
+
+                // Recessed Dark Archway Opening
+                const recess = new THREE.Mesh(
+                    new THREE.CylinderGeometry(1.15, 1.15, 0.5, 16, 1, false, 0, Math.PI),
+                    materials.darkArchInterior
+                );
+                recess.rotation.z = Math.PI / 2;
+                recess.rotation.y = Math.PI / 2;
+                recess.position.set(0, 3.3, -0.1);
+                archGroup.add(recess);
+
+                const recessRect = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.3, 3.3, 0.45),
+                    materials.darkArchInterior
+                );
+                recessRect.position.set(0, 1.65, -0.1);
+                archGroup.add(recessRect);
+
+                sanctuaryGroup.add(archGroup);
+            }
+
+            // ------------------------------------------------------------------------
+            // D. ICONIC FLUTED CONICAL SPIRES OF LALISH (الأبراج المخروطية المضلعة)
+            // ------------------------------------------------------------------------
+            // 1. Grand Spire of Sheikh Adi Sanctuary (البرج المخروطي الرئيسي)
+            const grandSpire = createFlutedConicalSpire(3.35, 12.2, 24, materials);
+            grandSpire.position.set(-3.5, 13.8, -6.5);
+            templeExportGroup.add(grandSpire);
+
+            // 2. Secondary Eastern Sacred Spire
+            const eastSpire = createFlutedConicalSpire(2.45, 9.2, 20, materials);
+            eastSpire.position.set(5.2, 10.4, -6.2);
+            templeExportGroup.add(eastSpire);
+
+            // 3. Western Courtyard Sacred Spire
+            const westSpire = createFlutedConicalSpire(2.05, 7.6, 18, materials);
+            westSpire.position.set(-11.5, 9.2, -1.5);
+            templeExportGroup.add(westSpire);
+
+            // 4. Upper Valley Chapel Spire (Nestled slightly higher on the slope)
+            const northSpireBase = new THREE.Mesh(
+                new THREE.BoxGeometry(6.5, 5.5, 6.5),
+                materials.carvedStone
+            );
+            northSpireBase.position.set(11.5, 7.8, -12.5);
+            northSpireBase.castShadow = true;
+            northSpireBase.receiveShadow = true;
+            templeExportGroup.add(northSpireBase);
+
+            const northSpire = createFlutedConicalSpire(1.9, 7.2, 18, materials);
+            northSpire.position.set(11.5, 10.5, -12.5);
+            templeExportGroup.add(northSpire);
+
+            // Soft Night Uplights for the Fluted Conical Spires so their ribs glow at night
+            const spireCoords = [
+                new THREE.Vector3(-3.5, 15.2, -4.2),
+                new THREE.Vector3(5.2, 12.0, -4.2),
+                new THREE.Vector3(-11.5, 10.5, 0.5),
+                new THREE.Vector3(11.5, 11.8, -10.5)
+            ];
+            spireCoords.forEach(pos => {
+                const upLight = new THREE.PointLight(0xffdfa0, 0, 18, 1.5);
+                upLight.position.copy(pos);
+                scene.add(upLight);
+                spireUplights.push(upLight);
+            });
+
+            // ------------------------------------------------------------------------
+            // E. PERIMETER WALLS & SACRED ENTRANCE PORTAL (المدخل والجدران الحجرية)
+            // ------------------------------------------------------------------------
+            // Southern Courtyard Wall (Left & Right of Main Entrance)
+            const southWallLeft = new THREE.Mesh(
+                new THREE.BoxGeometry(12.5, 3.6, 1.4),
+                materials.carvedStone
+            );
+            southWallLeft.position.set(-9.8, 5.9, 13.2);
+            southWallLeft.castShadow = true;
+            southWallLeft.receiveShadow = true;
+            templeExportGroup.add(southWallLeft);
+
+            const southWallRight = new THREE.Mesh(
+                new THREE.BoxGeometry(12.5, 3.6, 1.4),
+                materials.carvedStone
+            );
+            southWallRight.position.set(9.8, 5.9, 13.2);
+            southWallRight.castShadow = true;
+            southWallRight.receiveShadow = true;
+            templeExportGroup.add(southWallRight);
+
+            // Monumental Carved Entrance Portal (المدخل الرئيسي)
+            const portalGroup = new THREE.Group();
+            portalGroup.position.set(0, 4.15, 13.4);
+            templeExportGroup.add(portalGroup);
+
+            const portalLeftTower = new THREE.Mesh(
+                new THREE.BoxGeometry(2.3, 6.2, 2.4),
+                materials.carvedStone
+            );
+            portalLeftTower.position.set(-2.6, 3.1, 0);
+            portalLeftTower.castShadow = true;
+            portalLeftTower.receiveShadow = true;
+            portalGroup.add(portalLeftTower);
+
+            const portalRightTower = new THREE.Mesh(
+                new THREE.BoxGeometry(2.3, 6.2, 2.4),
+                materials.carvedStone
+            );
+            portalRightTower.position.set(2.6, 3.1, 0);
+            portalRightTower.castShadow = true;
+            portalRightTower.receiveShadow = true;
+            portalGroup.add(portalRightTower);
+
+            const portalHeader = new THREE.Mesh(
+                new THREE.BoxGeometry(7.8, 2.1, 2.6),
+                materials.carvedStone
+            );
+            portalHeader.position.set(0, 5.6, 0);
+            portalHeader.castShadow = true;
+            portalHeader.receiveShadow = true;
+            portalGroup.add(portalHeader);
+
+            // Stepped Crenellations & Sacred Sun Relief above Portal
+            const portalCrown = new THREE.Mesh(
+                new THREE.BoxGeometry(5.2, 1.1, 2.0),
+                materials.darkStoneTrim
+            );
+            portalCrown.position.set(0, 7.1, 0);
+            portalCrown.castShadow = true;
+            portalGroup.add(portalCrown);
+
+            // Golden Solar Emblem Relief on Entrance Facade (شمس لالش)
+            const sunEmblem = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.68, 0.68, 0.16, 24),
+                materials.gold
+            );
+            sunEmblem.rotation.x = Math.PI / 2;
+            sunEmblem.position.set(0, 5.6, 1.32);
+            portalGroup.add(sunEmblem);
+
+            // Sacred Threshold Sill (العتبة المقدسة)
+            const thresholdSill = new THREE.Mesh(
+                new THREE.BoxGeometry(3.2, 0.45, 1.8),
+                materials.darkStoneTrim
+            );
+            thresholdSill.position.set(0, 0.22, 0);
+            portalGroup.add(thresholdSill);
+
+            // ------------------------------------------------------------------------
+            // F. STEPPED STONE PATHWAY & SILAT BRIDGE (الممر الحجري وجسر الصراط)
+            // ------------------------------------------------------------------------
+            const pathwayGroup = new THREE.Group();
+            templeExportGroup.add(pathwayGroup);
+
+            // Grand Stone Staircase ascending from Z=20.5 to Portal at Z=14.2
+            const stepCount = 12;
+            for (let s = 0; s < stepCount; s++) {
+                const progress = s / stepCount;
+                const stepY = 0.35 + progress * 3.8;
+                const stepZ = 20.5 - progress * 6.2;
+                const stepMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(5.6, 0.38, 0.65),
+                    materials.courtyardPaving
+                );
+                stepMesh.position.set(0, stepY, stepZ);
+                stepMesh.castShadow = true;
+                stepMesh.receiveShadow = true;
+                pathwayGroup.add(stepMesh);
+            }
+
+            // Stone Staircase Parapet Walls
+            [-3.1, 3.1].forEach(px => {
+                const rampWall = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.65, 1.3, 6.8),
+                    materials.carvedStone
+                );
+                rampWall.position.set(px, 2.6, 17.4);
+                rampWall.rotation.x = -0.52;
+                rampWall.castShadow = true;
+                pathwayGroup.add(rampWall);
+            });
+
+            // Sacred Stone Arch Bridge over the Stream (جسر الصراط الحجري) at Z=23
+            const bridgeDeck = new THREE.Mesh(
+                new THREE.BoxGeometry(6.2, 0.6, 6.5),
+                materials.courtyardPaving
+            );
+            bridgeDeck.position.set(0, 0.65, 23.2);
+            bridgeDeck.castShadow = true;
+            bridgeDeck.receiveShadow = true;
+            pathwayGroup.add(bridgeDeck);
+
+            [-2.85, 2.85].forEach(bx => {
+                const parapet = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 1.0, 6.5),
+                    materials.carvedStone
+                );
+                parapet.position.set(bx, 1.25, 23.2);
+                parapet.castShadow = true;
+                pathwayGroup.add(parapet);
+            });
+
+            // Lower Stone Approach Path (Z = 26 to 38)
+            const lowerPath = new THREE.Mesh(
+                new THREE.BoxGeometry(5.8, 0.28, 13.5),
+                materials.courtyardPaving
+            );
+            lowerPath.position.set(0, 0.25, 32.8);
+            lowerPath.receiveShadow = true;
+            pathwayGroup.add(lowerPath);
+
+            // ------------------------------------------------------------------------
+            // G. SACRED OIL LAMPS & LANTERNS ALONG PATHWAYS & COURTYARD
+            // ------------------------------------------------------------------------
+            // Pathway & Bridge Lanterns
+            addSacredLantern(templeExportGroup, -3.1, 0.35, 30.5, materials, true);
+            addSacredLantern(templeExportGroup, 3.1, 0.35, 30.5, materials, true);
+            addSacredLantern(templeExportGroup, -2.85, 1.75, 23.2, materials, true);
+            addSacredLantern(templeExportGroup, 2.85, 1.75, 23.2, materials, true);
+
+            // Entrance Portal Lanterns
+            addSacredLantern(templeExportGroup, -3.4, 4.15, 14.8, materials, true);
+            addSacredLantern(templeExportGroup, 3.4, 4.15, 14.8, materials, true);
+
+            // Courtyard & Colonnade Lanterns
+            addSacredLantern(templeExportGroup, -6.5, 4.2, 5.5, materials, true);
+            addSacredLantern(templeExportGroup, 6.5, 4.2, 5.5, materials, true);
+            addSacredLantern(templeExportGroup, -3.2, 4.2, -0.5, materials, true);
+            addSacredLantern(templeExportGroup, 3.2, 4.2, -0.5, materials, true);
+
+            // ------------------------------------------------------------------------
+            // H. NATURAL VALLEY LANDSCAPING (أشجار الزيتون والتوت والسرو والصخور)
+            // ------------------------------------------------------------------------
+            function createOliveTree(x, y, z, scale = 1.0) {
+                const tree = new THREE.Group();
+                tree.position.set(x, y, z);
+                tree.scale.setScalar(scale);
+
+                const trunk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.25, 0.42, 2.4, 8),
+                    materials.oliveTrunk
+                );
+                trunk.position.y = 1.2;
+                trunk.castShadow = true;
+                trunk.receiveShadow = true;
+                tree.add(trunk);
+
+                const crownOffsets = [
+                    [0, 2.8, 0, 1.65],
+                    [-0.9, 2.5, 0.6, 1.25],
+                    [0.95, 2.6, -0.5, 1.3],
+                    [0.3, 3.4, 0.7, 1.15],
+                    [-0.6, 3.2, -0.7, 1.2]
+                ];
+                crownOffsets.forEach(([cx, cy, cz, cr]) => {
+                    constfoliage = new THREE.Mesh(
+                        new THREE.DodecahedronGeometry(cr, 1),
+                        materials.oliveFoliage
+                    );
+                    constfoliage.position.set(cx, cy, cz);
+                    constfoliage.scale.y = 0.72;
+                    constfoliage.castShadow = true;
+                    constfoliage.receiveShadow = true;
+                    tree.add(constfoliage);
+                });
+
+                scene.add(tree);
+            }
+
+            function createCypressTree(x, y, z, scale = 1.0) {
+                const tree = new THREE.Group();
+                tree.position.set(x, y, z);
+                tree.scale.setScalar(scale);
+
+                const trunk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.18, 0.28, 1.6, 7),
+                    materials.oliveTrunk
+                );
+                trunk.position.y = 0.8;
+                trunk.castShadow = true;
+                tree.add(trunk);
+
+                const cone1 = new THREE.Mesh(
+                    new THREE.ConeGeometry(1.15, 5.5, 9),
+                    materials.cypressFoliage
+                );
+                cone1.position.y = 3.8;
+                cone1.castShadow = true;
+                cone1.receiveShadow = true;
+                tree.add(cone1);
+
+                const cone2 = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.85, 4.2, 9),
+                    materials.cypressFoliage
+                );
+                cone2.position.y = 5.4;
+                cone2.castShadow = true;
+                tree.add(cone2);
+
+                scene.add(tree);
+            }
+
+            // Sacred Courtyard Mulberry/Olive Trees (authentic feature inside Lalish courtyards)
+            createOliveTree(-6.8, 4.2, 8.2, 0.95);
+            createOliveTree(7.2, 4.2, 8.8, 0.88);
+
+            // Surrounding Valley Trees
+            const valleyOliveCoords = [
+                [-18, 2.5, 18, 1.2], [19, 2.5, 17, 1.15],
+                [-24, 4.2, 4, 1.3], [25, 4.5, 2, 1.25],
+                [-22, 6.5, -14, 1.1], [23, 6.8, -15, 1.3],
+                [-12, 1.2, 29, 1.05], [14, 1.2, 30, 1.1],
+                [-28, 3.0, 26, 1.35], [27, 3.2, 28, 1.2]
+            ];
+            valleyOliveCoords.forEach(([x, y, z, s]) => createOliveTree(x, y, z, s));
+
+            const valleyCypressCoords = [
+                [-16, 3.8, 12, 1.1], [16.5, 3.8, 12, 1.15],
+                [-20, 5.5, -8, 1.25], [21, 5.8, -9, 1.2],
+                [-8, 0.8, 26, 0.95], [8.5, 0.8, 26, 1.0],
+                [-5, 9.5, -22, 1.3], [7, 9.8, -23, 1.25]
+            ];
+            valleyCypressCoords.forEach(([x, y, z, s]) => createCypressTree(x, y, z, s));
+
+            // Natural Valley Limestone Boulders
+            const rockGeo = new THREE.DodecahedronGeometry(1.2, 1);
+            const rockCoords = [
+                [-9, 0.4, 21.5, 1.4], [10.5, 0.3, 24.5, 1.1],
+                [-19, 3.5, 10, 1.8], [20, 3.8, 8, 1.6],
+                [-15, 8.2, -19, 2.2], [16, 8.5, -18, 2.0]
+            ];
+            rockCoords.forEach(([rx, ry, rz, rs]) => {
+                const rock = new THREE.Mesh(rockGeo, materials.darkStoneTrim);
+                rock.position.set(rx, ry, rz);
+                rock.scale.set(rs * 1.2, rs * 0.75, rs);
+                rock.rotation.set(rx, ry, rz);
+                rock.castShadow = true;
+                rock.receiveShadow = true;
+                scene.add(rock);
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 5. ATMOSPHERIC SKY DOME, STARS, MOON & SPIRITUAL PARTICLES
+         * ============================================================================
+         */
+        function buildAtmosphereAndLighting() {
+            // 1. Directional Sun / Moon Light with Soft Shadows
+            sunLight = new THREE.DirectionalLight(0xfff1d0, 1.35);
+            sunLight.position.set(38, 48, 32);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 10;
+            sunLight.shadow.camera.far = 140;
+            const d = 42;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            sunLight.shadow.bias = -0.0005;
+            scene.add(sunLight);
+
+            // 2. Hemisphere Valley Sky/Ground Fill Light
+            hemiLight = new THREE.HemisphereLight(0x87ceeb, 0xd2b48c, 0.65);
+            hemiLight.position.set(0, 50, 0);
+            scene.add(hemiLight);
+
+            // 3. Soft Ambient Light
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+            scene.add(ambientLight);
+
+            // 4. Custom Shader Sky Dome for Smooth Day/Night Gradient Transition
+            const skyGeo = new THREE.SphereGeometry(180, 32, 24);
+            skyMat = new THREE.ShaderMaterial({
+                side: THREE.BackSide,
+                depthWrite: false,
+                uniforms: {
+                    topColor: { value: new THREE.Color(0x2b6cb0) },
+                    bottomColor: { value: new THREE.Color(0xf6e0b5) },
+                    offset: { value: 18 },
+                    exponent: { value: 0.65 }
+                },
+                vertexShader: `
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                        vWorldPosition = worldPosition.xyz;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 topColor;
+                    uniform vec3 bottomColor;
+                    uniform float offset;
+                    uniform float exponent;
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        float h = normalize(vWorldPosition + offset).y;
+                        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+                    }
+                `
+            });
+            const skyDome = new THREE.Mesh(skyGeo, skyMat);
+            scene.add(skyDome);
+
+            // 5. Starfield for Night Mode
+            const starCount = 1400;
+            const starGeo = new THREE.BufferGeometry();
+            const starPositions = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(Math.random() * 0.85 + 0.15); // Keep above horizon
+                const r = 165;
+                starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                starPositions[i * 3 + 1] = r * Math.cos(phi);
+                starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            const starMat = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.9,
+                transparent: true,
+                opacity: 0.0
+            });
+            starsPoints = new THREE.Points(starGeo, starMat);
+            scene.add(starsPoints);
+
+            // 6. Glowing Moon Disc (Night) & Golden Sun Disc (Day)
+            moonMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(4.2, 24, 24),
+                new THREE.MeshBasicMaterial({ color: 0xfef9c3, transparent: true, opacity: 0 })
+            );
+            moonMesh.position.set(-55, 68, -85);
+            scene.add(moonMesh);
+
+            sunDiscMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(5.5, 24, 24),
+                new THREE.MeshBasicMaterial({ color: 0xfffbeb, transparent: true, opacity: 0.95 })
+            );
+            sunDiscMesh.position.set(65, 78, -75);
+            scene.add(sunDiscMesh);
+
+            // 7. Spiritual Floating Warm Light Particles (Fireflies / Sacred Ambiance at Night)
+            const particleCount = 120;
+            const particleGeo = new THREE.BufferGeometry();
+            const pPositions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                pPositions[i * 3] = (Math.random() - 0.5) * 44;
+                pPositions[i * 3 + 1] = 2 + Math.random() * 18;
+                pPositions[i * 3 + 2] = (Math.random() - 0.5) * 48 + 4;
+            }
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+            const particleMat = new THREE.PointsMaterial({
+                color: 0xffd571,
+                size: 0.35,
+                transparent: true,
+                opacity: 0.0
+            });
+            firefliesPoints = new THREE.Points(particleGeo, particleMat);
+            scene.add(firefliesPoints);
+        }
+
+        /**
+         * ============================================================================
+         * 6. DAY & NIGHT ATMOSPHERE INTERPOLATION
+         * ============================================================================
+         */
+        const PaletteDay = {
+            skyTop: new THREE.Color(0x2868a8),
+            skyBottom: new THREE.Color(0xf5deb3),
+            fog: new THREE.Color(0xeaddc5),
+            sunColor: new THREE.Color(0xfff1d0),
+            hemiSky: new THREE.Color(0x87ceeb),
+            hemiGround: new THREE.Color(0xc2a882)
+        };
+
+        const PaletteNight = {
+            skyTop: new THREE.Color(0x050814),
+            skyBottom: new THREE.Color(0x131d38),
+            fog: new THREE.Color(0x0b1224),
+            sunColor: new THREE.Color(0x7aa2f7),
+            hemiSky: new THREE.Color(0x1e293b),
+            hemiGround: new THREE.Color(0x0f172a)
+        };
+
+        function updateDayNightAtmosphere(dt, elapsedTime) {
+            // Smoothly interpolate dayNightMix toward targetDayNightMix
+            const diff = AppState.targetDayNightMix - AppState.dayNightMix;
+            if (Math.abs(diff) > 0.001) {
+                AppState.dayNightMix += diff * Math.min(1, dt * 3.2);
+            } else {
+                AppState.dayNightMix = AppState.targetDayNightMix;
+            }
+
+            const m = AppState.dayNightMix; // 0 = Day, 1 = Night
+
+            // Interpolate Sky Shader & Fog
+            skyMat.uniforms.topColor.value.copy(PaletteDay.skyTop).lerp(PaletteNight.skyTop, m);
+            skyMat.uniforms.bottomColor.value.copy(PaletteDay.skyBottom).lerp(PaletteNight.skyBottom, m);
+            scene.fog.color.copy(PaletteDay.fog).lerp(PaletteNight.fog, m);
+
+            // Interpolate Directional Sun / Moonlight
+            sunLight.color.copy(PaletteDay.sunColor).lerp(PaletteNight.sunColor, m);
+            sunLight.intensity = THREE.MathUtils.lerp(1.35, 0.42, m);
+            sunLight.position.set(
+                THREE.MathUtils.lerp(38, -32, m),
+                THREE.MathUtils.lerp(48, 42, m),
+                THREE.MathUtils.lerp(32, -28, m)
+            );
+
+            // Interpolate Hemisphere & Ambient
+            hemiLight.color.copy(PaletteDay.hemiSky).lerp(PaletteNight.hemiSky, m);
+            hemiLight.groundColor.copy(PaletteDay.hemiGround).lerp(PaletteNight.hemiGround, m);
+            hemiLight.intensity = THREE.MathUtils.lerp(0.68, 0.35, m);
+            ambientLight.intensity = THREE.MathUtils.lerp(0.25, 0.16, m);
+
+            // Stars, Moon & Sun Disc Opacity
+            starsPoints.material.opacity = Math.max(0, (m - 0.3) / 0.7) * 0.9;
+            moonMesh.material.opacity = m;
+            sunDiscMesh.material.opacity = 1 - m;
+
+            // Sacred Lantern Point Lights & Gentle Flame Flicker
+            lanternLights.forEach((item) => {
+                const flicker = 0.92 + Math.sin(elapsedTime * 5.5 + item.phase) * 0.08;
+                item.light.intensity = item.baseIntensity * m * flicker;
+            });
+
+            lanternFlames.forEach((flame, idx) => {
+                const scalePulse = 0.85 + Math.sin(elapsedTime * 6 + idx) * 0.18 * m;
+                flame.scale.setScalar(scalePulse);
+                flame.material.color.setHex(m > 0.4 ? 0xffb74d : 0xd99b52);
+            });
+
+            // Warm Uplighting on Iconic Fluted Conical Spires at Night
+            spireUplights.forEach((uLight) => {
+                uLight.intensity = 1.15 * m;
+            });
+
+            // Floating Spiritual Particles in Night Mode
+            firefliesPoints.material.opacity = m * 0.75;
+            if (m > 0.05) {
+                const pos = firefliesPoints.geometry.attributes.position;
+                for (let i = 0; i < pos.count; i++) {
+                    let py = pos.getY(i) + Math.sin(elapsedTime * 1.2 + i) * 0.008;
+                    if (py > 20) py = 3;
+                    pos.setY(i, py);
+                }
+                pos.needsUpdate = true;
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 7. 3D ARABIC LABELS CREATION & PROJECTION
+         * ============================================================================
+         */
+        function initSceneLabels() {
+            const container = document.getElementById('labels-container');
+            container.innerHTML = '';
+
+            Landmarks.forEach((lm) => {
+                const el = document.createElement('div');
+                el.className = 'scene-label';
+                el.innerHTML = `
+                    <div class="scene-label-badge">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span>${lm.title}</span>
+                    </div>
+                    <div class="scene-label-stem"></div>
+                    <div class="scene-label-dot"></div>
+                `;
+
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    stopAutoTour();
+                    focusOnLandmark(lm);
+                });
+
+                container.appendChild(el);
+                labelElements.push({ element: el, landmark: lm });
+            });
+        }
+
+        function updateSceneLabels() {
+            const tempV = new THREE.Vector3();
+            const widthHalf = window.innerWidth / 2;
+            const heightHalf = window.innerHeight / 2;
+
+            labelElements.forEach(({ element, landmark }) => {
+                if (!AppState.labelsVisible) {
+                    element.style.opacity = '0';
+                    element.style.pointerEvents = 'none';
+                    return;
+                }
+
+                tempV.copy(landmark.worldPos);
+                tempV.project(camera);
+
+                // Check if behind camera frustum
+                if (tempV.z > 1) {
+                    element.style.opacity = '0';
+                    element.style.pointerEvents = 'none';
+                } else {
+                    const x = (tempV.x * widthHalf) + widthHalf;
+                    const y = -(tempV.y * heightHalf) + heightHalf;
+                    element.style.left = `${x}px`;
+                    element.style.top = `${y}px`;
+                    element.style.opacity = '1';
+                    element.style.pointerEvents = 'auto';
+                }
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 8. CAMERA TRANSITIONS & GUIDED CINEMATIC TOUR (جولة تلقائية)
+         * ============================================================================
+         */
+        function flyCameraTo(targetPos, targetLookAt, duration = 2000) {
+            AppState.cameraTransition.active = true;
+            AppState.cameraTransition.startTime = performance.now();
+            AppState.cameraTransition.duration = duration;
+            AppState.cameraTransition.startPos.copy(camera.position);
+            AppState.cameraTransition.startTarget.copy(controls.target);
+            AppState.cameraTransition.endPos.copy(targetPos);
+            AppState.cameraTransition.endTarget.copy(targetLookAt);
+        }
+
+        function focusOnLandmark(landmark) {
+            flyCameraTo(landmark.camPos, landmark.camTarget, 2100);
+            showPOIBanner(landmark.title, landmark.description);
+        }
+
+        let bannerTimeout = null;
+        function showPOIBanner(title, desc, persistent = false) {
+            const banner = document.getElementById('poi-banner');
+            document.getElementById('poi-title').textContent = title;
+            document.getElementById('poi-desc').textContent = desc;
+            banner.classList.remove('opacity-0', 'translate-y-4');
+            banner.classList.add('opacity-100', 'translate-y-0');
+
+            if (bannerTimeout) clearTimeout(bannerTimeout);
+            if (!persistent) {
+                bannerTimeout = setTimeout(() => {
+                    hidePOIBanner();
+                }, 5800);
+            }
+        }
+
+        function hidePOIBanner() {
+            const banner = document.getElementById('poi-banner');
+            banner.classList.add('opacity-0', 'translate-y-4');
+            banner.classList.remove('opacity-100', 'translate-y-0');
+        }
+
+        function startAutoTour() {
+            AppState.autoTourActive = true;
+            AppState.tourIndex = 0;
+            AppState.tourTimer = 0;
+            document.getElementById('btn-auto-tour').classList.add('active-btn');
+            const lm = Landmarks[AppState.tourIndex];
+            flyCameraTo(lm.camPos, lm.camTarget, 2600);
+            showPOIBanner(lm.title, lm.description, true);
+        }
+
+        function stopAutoTour() {
+            if (!AppState.autoTourActive) return;
+            AppState.autoTourActive = false;
+            document.getElementById('btn-auto-tour').classList.remove('active-btn');
+            hidePOIBanner();
+        }
+
+        /**
+         * ============================================================================
+         * 9. UI EVENT LISTENERS & GLTF/GLB EXPORT
+         * ============================================================================
+         */
+        function showToast(msg) {
+            const toast = document.getElementById('toast-msg');
+            toast.textContent = msg;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 3200);
+        }
+
+        function bindUIEvents() {
+            const btnDay = document.getElementById('btn-day-mode');
+            const btnNight = document.getElementById('btn-night-mode');
+            const modeBadge = document.getElementById('mode-badge');
+
+            function setDayNightMode(night) {
+                AppState.isNight = night;
+                AppState.targetDayNightMix = night ? 1 : 0;
+
+                if (night) {
+                    btnNight.classList.add('active-btn');
+                    btnDay.classList.remove('active-btn');
+                    modeBadge.textContent = 'الوضع الليلي';
+                    modeBadge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/40';
+                } else {
+                    btnDay.classList.add('active-btn');
+                    btnNight.classList.remove('active-btn');
+                    modeBadge.textContent = 'الوضع النهاري';
+                    modeBadge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30';
+                }
+            }
+
+            btnDay.addEventListener('click', () => setDayNightMode(false));
+            btnNight.addEventListener('click', () => setDayNightMode(true));
+
+            // Guided Auto Tour Toggle
+            document.getElementById('btn-auto-tour').addEventListener('click', () => {
+                if (AppState.autoTourActive) {
+                    stopAutoTour();
+                } else {
+                    startAutoTour();
+                }
+            });
+
+            // Toggle 3D Arabic Labels
+            const btnLabels = document.getElementById('btn-toggle-labels');
+            btnLabels.addEventListener('click', () => {
+                AppState.labelsVisible = !AppState.labelsVisible;
+                btnLabels.classList.toggle('active-btn', AppState.labelsVisible);
+            });
+
+            // Reset Camera
+            document.getElementById('btn-reset-camera').addEventListener('click', () => {
+                stopAutoTour();
+                hidePOIBanner();
+                flyCameraTo(DEFAULT_CAM_POS, DEFAULT_CAM_TARGET, 1800);
+            });
+
+            // Information Drawer Toggle
+            const infoDrawer = document.getElementById('info-drawer');
+            const btnInfo = document.getElementById('btn-info');
+            const btnInfoMobile = document.getElementById('btn-info-mobile');
+            const btnCloseInfo = document.getElementById('btn-close-info');
+
+            function toggleInfoDrawer(forceState) {
+                AppState.infoOpen = typeof forceState === 'boolean' ? forceState : !AppState.infoOpen;
+                btnInfo.classList.toggle('active-btn', AppState.infoOpen);
+                btnInfoMobile.classList.toggle('active-btn', AppState.infoOpen);
+                if (AppState.infoOpen) {
+                    infoDrawer.classList.remove('opacity-0', 'pointer-events-none', 'translate-x-8');
+                    infoDrawer.classList.add('opacity-100', 'pointer-events-auto', 'translate-x-0');
+                } else {
+                    infoDrawer.classList.add('opacity-0', 'pointer-events-none', 'translate-x-8');
+                    infoDrawer.classList.remove('opacity-100', 'pointer-events-auto', 'translate-x-0');
+                }
+            }
+
+            btnInfo.addEventListener('click', () => toggleInfoDrawer());
+            btnInfoMobile.addEventListener('click', () => toggleInfoDrawer());
+            btnCloseInfo.addEventListener('click', () => toggleInfoDrawer(false));
+
+            // Bottom Quick-Access Landmark Buttons
+            document.querySelectorAll('.landmark-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.getAttribute('data-target');
+                    const lm = Landmarks.find(item => item.id === targetId);
+                    if (lm) {
+                        stopAutoTour();
+                        focusOnLandmark(lm);
+                    }
+                });
+            });
+
+            // Export GLTF/GLB Button
+            document.getElementById('btn-export-glb').addEventListener('click', () => {
+                if (!THREE.GLTFExporter) {
+                    showToast('ميزة التصدير غير متوفرة حالياً');
+                    return;
+                }
+                showToast('جاري تصدير نموذج معبد لالش بصيغة GLB...');
+                const exporter = new THREE.GLTFExporter();
+                exporter.parse(
+                    templeExportGroup,
+                    (result) => {
+                        const blob = new Blob([result], { type: 'application/octet-stream' });
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = 'lalish-temple-3d.glb';
+                        link.click();
+                        URL.revokeObjectURL(link.href);
+                        showToast('تم تحميل ملف lalish-temple-3d.glb بنجاح');
+                    },
+                    { binary: true }
+                );
+            });
+
+            // Cancel auto tour if user manually drags the scene
+            renderer.domElement.addEventListener('pointerdown', () => {
+                if (AppState.autoTourActive) {
+                    stopAutoTour();
+                }
+                AppState.cameraTransition.active = false;
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 10. INITIALIZATION & MAIN ANIMATION LOOP
+         * ============================================================================
+         */
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene & Fog
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0xeaddc5, 0.0055);
+
+            // Perspective Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 400);
+            camera.position.copy(DEFAULT_CAM_POS);
+
+            // WebGL Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.05;
+            container.appendChild(renderer.domElement);
+
+            // OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.target.copy(DEFAULT_CAM_TARGET);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.04; // Prevent camera clipping below ground
+            controls.minDistance = 8;
+            controls.maxDistance = 95;
+            controls.update();
+
+            clock = new THREE.Clock();
+
+            // Build Scene Elements
+            buildAtmosphereAndLighting();
+            buildLalishScene();
+            initSceneLabels();
+            bindUIEvents();
+
+            // Handle Window Resize Responsively
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Cubic ease-in-out helper
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = clock.getDelta();
+            const elapsedTime = clock.getElapsedTime();
+
+            // 1. Update Smooth Camera Fly-To Transitions
+            if (AppState.cameraTransition.active) {
+                const now = performance.now();
+                const elapsed = now - AppState.cameraTransition.startTime;
+                const progress = Math.min(1, elapsed / AppState.cameraTransition.duration);
+                const eased = easeInOutCubic(progress);
+
+                camera.position.lerpVectors(
+                    AppState.cameraTransition.startPos,
+                    AppState.cameraTransition.endPos,
+                    eased
+                );
+                controls.target.lerpVectors(
+                    AppState.cameraTransition.startTarget,
+                    AppState.cameraTransition.endTarget,
+                    eased
+                );
+
+                if (progress >= 1) {
+                    AppState.cameraTransition.active = false;
+                }
+            }
+
+            // 2. Update Guided Cinematic Auto Tour
+            if (AppState.autoTourActive) {
+                AppState.tourTimer += dt;
+
+                // Subtle cinematic orbit while admiring the current stop
+                if (!AppState.cameraTransition.active) {
+                    const offset = camera.position.clone().sub(controls.target);
+                    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), dt * 0.14);
+                    camera.position.copy(controls.target).add(offset);
+                }
+
+                // Advance to next landmark every 6.5 seconds
+                if (AppState.tourTimer > 6.5) {
+                    AppState.tourTimer = 0;
+                    AppState.tourIndex = (AppState.tourIndex + 1) % Landmarks.length;
+                    const nextLandmark = Landmarks[AppState.tourIndex];
+                    flyCameraTo(nextLandmark.camPos, nextLandmark.camTarget, 2600);
+                    showPOIBanner(nextLandmark.title, nextLandmark.description, true);
+                }
+            }
+
+            // 3. Update Day/Night Lighting & Atmosphere
+            updateDayNightAtmosphere(dt, elapsedTime);
+
+            // 4. Update OrbitControls & 3D Projected Arabic Labels
+            controls.update();
+            updateSceneLabels();
+
+            // 5. Render 3D Scene
+            renderer.render(scene, camera);
+        }
+
+        window.onload = function () {
+            init();
+            animate();
+        };
+    </script>
+</body>
+</html>
